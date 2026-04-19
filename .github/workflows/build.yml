@@ -12,23 +12,28 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install \
-          g++-12 \
+          g++-12-aarch64-linux-gnu \
           autoconf \
           automake \
           autotools-dev \
           autopoint \
           libtool \
           pkg-config \
-          libssl-dev \
-          libc-ares-dev \
-          zlib1g-dev \
-          libsqlite3-dev \
-          libssh2-1-dev \
-          libcppunit-dev
-    - name: Setup gcc
+          libssl-dev:arm64 \
+          libc-ares-dev:arm64 \
+          zlib1g-dev:arm64 \
+          libsqlite3-dev:arm64 \
+          libssh2-1-dev:arm64
+    - name: Enable arm64 apt architecture
       run: |
-        echo 'CC=gcc-12' >> $GITHUB_ENV
-        echo 'CXX=g++-12' >> $GITHUB_ENV
+        sudo dpkg --add-architecture arm64
+        sudo apt-get update
+    - name: Setup cross compiler
+      run: |
+        echo 'CC=aarch64-linux-gnu-gcc-12' >> $GITHUB_ENV
+        echo 'CXX=aarch64-linux-gnu-g++-12' >> $GITHUB_ENV
+        echo 'AR=aarch64-linux-gnu-ar' >> $GITHUB_ENV
+        echo 'STRIP=aarch64-linux-gnu-strip' >> $GITHUB_ENV
     - name: Libtool
       run: |
         autoreconf -i
@@ -37,15 +42,18 @@ jobs:
         echo "CPPFLAGS=-O2" >> $GITHUB_ENV
     - name: Configure autotools
       run: |
-        ./configure --without-gnutls --with-openssl
+        ./configure \
+          --host=aarch64-linux-gnu \
+          --without-gnutls \
+          --with-openssl
     - name: Build aria2
       run: |
         make -j"$(nproc)"
     - name: Strip binary
       run: |
-        strip src/aria2c
+        aarch64-linux-gnu-strip src/aria2c
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: aria2c-linux
+        name: aria2c-linux-arm64
         path: src/aria2c
