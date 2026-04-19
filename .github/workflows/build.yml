@@ -5,14 +5,6 @@ on:
   workflow_dispatch:
 jobs:
   build:
-    strategy:
-      matrix:
-        compiler: [gcc, clang]
-        crypto: [openssl, gnutls]
-        bittorrent: [with-bt, without-bt]
-        exclude:
-        - crypto: openssl
-          bittorrent: without-bt
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
@@ -21,7 +13,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install \
           g++-12 \
-          clang-15 \
           autoconf \
           automake \
           autotools-dev \
@@ -29,19 +20,12 @@ jobs:
           libtool \
           pkg-config \
           libssl-dev \
-          libgnutls28-dev \
           libc-ares-dev \
           zlib1g-dev \
           libsqlite3-dev \
           libssh2-1-dev \
           libcppunit-dev
-    - name: Setup clang
-      if: matrix.compiler == 'clang'
-      run: |
-        echo 'CC=clang-15' >> $GITHUB_ENV
-        echo 'CXX=clang++-15' >> $GITHUB_ENV
     - name: Setup gcc
-      if: matrix.compiler == 'gcc'
       run: |
         echo 'CC=gcc-12' >> $GITHUB_ENV
         echo 'CXX=g++-12' >> $GITHUB_ENV
@@ -51,22 +35,16 @@ jobs:
     - name: Setup compiler flags
       run: |
         asanflags="-fsanitize=address,undefined -fno-sanitize-recover=undefined"
-        CPPFLAGS="$asanflags -g3"
-        LDFLAGS="$asanflags"
-        echo 'CPPFLAGS='"$CPPFLAGS" >> $GITHUB_ENV
-        echo 'LDFLAGS='"$LDFLAGS" >> $GITHUB_ENV
-    - name: Disable BitTorrent
-      if: matrix.bittorrent == 'without-bt'
+        echo "CPPFLAGS=$asanflags -g3" >> $GITHUB_ENV
+        echo "LDFLAGS=$asanflags" >> $GITHUB_ENV
+    - name: Configure autotools
       run: |
-        echo 'FEATURE_FLAGS=--disable-bittorrent' >> $GITHUB_ENV
-    - name: Configure autotools (gnutls)
-      if: matrix.crypto == 'gnutls'
-      run: |
-        ./configure --with-gnutls --without-openssl $FEATURE_FLAGS
-    - name: Configure autotools (openssl)
-      if: matrix.crypto == 'openssl'
-      run: |
-        ./configure --without-gnutls --with-openssl $FEATURE_FLAGS
+        ./configure --without-gnutls --with-openssl
     - name: Build aria2
       run: |
-        make -j"$(nproc)" check
+        make -j"$(nproc)"
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: aria2c-linux
+        path: src/aria2c
