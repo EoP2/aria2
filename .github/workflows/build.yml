@@ -34,15 +34,16 @@ jobs:
         autoreconf -i
     - name: Setup compiler flags
       run: |
-        asanflags="-fsanitize=address,undefined -fno-sanitize-recover=undefined"
-        echo "CPPFLAGS=$asanflags -g3" >> $GITHUB_ENV
-        echo "LDFLAGS=$asanflags" >> $GITHUB_ENV
+        echo "CPPFLAGS=-O2" >> $GITHUB_ENV
     - name: Configure autotools
       run: |
         ./configure --without-gnutls --with-openssl
     - name: Build aria2
       run: |
         make -j"$(nproc)"
+    - name: Strip binary
+      run: |
+        strip src/aria2c
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
